@@ -7,6 +7,8 @@ const PetBox = ({pet}) => (
     </figure>
     <div className="pet-name">{pet.name}</div>
     <div className="pet-type">{pet.type}</div>
+    <span className="">{pet.lastVaccineType}</span>
+    <span className="">{pet.lastVaccineDays}</span>
   </div>
 )
 
