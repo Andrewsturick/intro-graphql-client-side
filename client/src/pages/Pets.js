@@ -2,15 +2,69 @@ import React, {useState} from 'react'
 import gql from 'graphql-tag'
 import PetBox from '../components/PetBox'
 import NewPet from '../components/NewPet'
-import { useQuery, useMutation } from '@apollo/react-hooks'
+import { useQuery, useMutation, useApolloClient } from '@apollo/react-hooks'
 import Loader from '../components/Loader'
 
-export default function Pets () {
+const GET_PETS = gql`
+  query getPets($input: PetsInput) {
+    pets(input: $input) {
+      name
+      type
+      id
+      img
+    }
+  }
+`;
+
+
+const createNew = gql`
+  mutation newPet($input: NewPetInput!) {
+    newPet: addPet (input: $input) {
+      name
+      type
+      id
+      img
+    }
+  }
+`;
+
+
+
+export default function Pets (...args) {
+  console.log(args)
   const [modal, setModal] = useState(false)
-  
+  const pets = useQuery(GET_PETS);
+  const client = useApolloClient();
+
+  const [createNewPet] = useMutation(createNew, {
+    update(cache, {data: {newPet}}) {
+
+      const {pets} = cache.readQuery({query: GET_PETS});
+      console.log({pets})
+      cache.writeQuery({query: GET_PETS, data: { pets: pets.concat(newPet)}})
+    }
+  });
+  if (pets.loading) return <Loader /> 
+
+
   const onSubmit = input => {
     setModal(false)
+    console.log(input)
+    createNewPet({
+      variables: {input},
+      optimisticResponse: {
+        __typename: "Mutation",
+        newPet: {
+          __typename: "Pet",
+          id: Math.random() + "",
+          name: input.name,
+          type: input.type,
+          img: 'http://placekitten.com/300/300',
+        }
+      }
+    })
   }
+
 
   const petsList = pets.data.pets.map(pet => (
     <div className="col-xs-12 col-md-4 col" key={pet.id}>
@@ -24,7 +78,7 @@ export default function Pets () {
     return (
       <div className="row center-xs">
         <div className="col-xs-8">
-          <NewPet onSubmit={onSubmit} onCancel={() => setModal(false)}/>
+          <NewPet onSubmit={(input) => onSubmit(input)} onCancel={() => setModal(false)}/>
         </div>
       </div>
     )
